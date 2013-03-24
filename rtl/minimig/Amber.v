@@ -117,6 +117,10 @@ always @ (posedge clk) begin
 `endif
 end
 
+// TODO
+reg  [ 11-1:0] sd_lbuf_wr;              // line buffer write pointer
+// TODO
+
 // pixel data delayed by one hires pixel for horizontal interpolation
 always @ (posedge clk) begin
   if (sd_lbuf_wr[0])  begin // sampled at 14MHz (hires clock rate)
@@ -136,7 +140,7 @@ assign hi_b = hi_en ? ({1'b0, blue_in}  + {1'b0, b_in_d}) : {blue_in[3:0] , 1'b0
 reg  [ 18-1:0] sd_lbuf [0:1024-1];      // line buffer for scan doubling (there are 908/910 hires pixels in every line)
 reg  [ 18-1:0] sd_lbuf_o;               // line buffer output register
 reg  [ 18-1:0] sd_lbuf_o_d;             // compensantion for one clock delay of the second line buffer
-reg  [ 11-1:0] sd_lbuf_wr;              // line buffer write pointer
+//reg  [ 11-1:0] sd_lbuf_wr;              // line buffer write pointer
 reg  [ 11-1:0] sd_lbuf_rd;              // line buffer read pointer
 
 // scandoubler line buffer write pointer
