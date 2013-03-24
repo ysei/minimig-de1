@@ -172,7 +172,8 @@ module Minimig1
 	//system	pins
 	input	clk28m,				//28.37516 MHz clock
 	input	clk,				//system clock (7.09379 MHz)
-  input clk7_en,      // 7MHz clock enable
+  input clk7p_en,      // 7MHz posedge clock enable
+  input clk7n_en,      // 7MHz negedge clock enable
 	input c1,			// clock enable signal
 	input c3,			// clock enable signal
 	input cck,			// colour clock enable
@@ -809,7 +810,9 @@ sram_bridge RAM1
 
 ActionReplay CART1
 (
-	.clk(clk),
+	.clk(clk28m),
+  .clk7p_en (clk7p_en),
+  .clk7n_en (clk7n_en),
 	.reset(reset),
 	.cpu_address(cpu_address),
 	.cpu_address_in(cpu_address_out),
