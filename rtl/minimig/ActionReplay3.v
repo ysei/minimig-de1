@@ -150,10 +150,10 @@ always @ (posedge clk) begin
 end
 
 // freeze button has been pressed
-assign freeze_req = freeze & ~freeze_del & (~active | ~aron);
+assign freeze_req = freeze & ~freeze_del & (~active/* | ~aron*/);
 
 // int7 request
-assign int7_req = ~boot & aron & (freeze_req | reset_req | break_req);
+assign int7_req = ~boot & /*aron &*/ (freeze_req | reset_req | break_req);
 
 // level7 interrupt ack cycle, on Amiga interrupt vector number is read from kickstart rom
 // A[23:4] all high, A[3:1] vector number
@@ -209,31 +209,25 @@ end
 
 // chip ram overlay, when INT7 is active AR rom apears in chipram area
 // cleared by write to $400006
-always @ (posedge clk) begin
-  if (clk7p_en) begin
-    if (reset)
-      ram_ovl <= 1'b0;
-    else if (l_int7 && l_int7_ack && cpu_rd) // once again we don't know the state of CPU's FCx signals
-      ram_ovl <= 1'b1;
-    else if (sel_rom && (cpu_address_in[2:1]==2'b11) && (cpu_hwr|cpu_lwr))
-      ram_ovl <= 1'b0;
-  end
-end
+always @(posedge clk)
+	if (reset)
+		ram_ovl <= 1'b0;
+	else if (aron && l_int7 && l_int7_ack && cpu_rd) // once again we don't know the state of CPU's FCx signals
+		ram_ovl <= 1'b1;
+	else if (sel_rom && (cpu_address_in[2:1]==2'b11) && (cpu_hwr|cpu_lwr))
+		ram_ovl <= 1'b0;
 
 // when INT7 is activated AR's rom and ram apear in its address space ($400000-$47FFFF)
 // this flag is cleared by write to $400000 (see code at  $4013DA)
 // since we miss CPU's FC signals we cannot distinguish data and code access
 // so we don't hide AR's rom and ram
-always @ (posedge clk) begin
-  if (clk7p_en) begin
-    if (reset)
-      active <= 1'b0;
-    else if (l_int7 && l_int7_ack && cpu_rd) // once again we don't know the state of CPU's FC signals
-      active <= 1'b1;
-    else if (sel_mode && (cpu_address_in[2:1]==2'b00) && (cpu_hwr|cpu_lwr))
-      active <= 1'b0;
-  end
-end
+always @(posedge clk)
+	if (reset)
+		active <= 1'b0;
+	else if (aron && l_int7 && l_int7_ack && cpu_rd)// once again we don't know the state of CPU's FC signals
+		active <= 1'b1;
+	else if (sel_mode && (cpu_address_in[2:1]==2'b00) && (cpu_hwr|cpu_lwr))
+		active <= 1'b0;
 
 // override chipram decoding (externally gated with rd)
 assign ovr = ram_ovl;

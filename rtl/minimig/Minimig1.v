@@ -178,6 +178,7 @@ module Minimig1
 	input c3,			// clock enable signal
 	input cck,			// colour clock enable
 	input [9:0] eclk,			// ECLK enable (1/10th of CLK)
+  input cpu_speed,
 	//rs232 pins
 	input	rxd,				//rs232 receive
 	output	txd,				//rs232 send
@@ -358,7 +359,7 @@ wire	[1:0] hr_filter;		//hires interpolation filter mode: bit 0 - horizontal, bi
 wire	[1:0] scanline;			//scanline effect configuration
 wire	hires;					//hires signal from Denise for interpolation filter enable in Amber
 wire	aron;					//Action Replay is enabled
-wire	cpu_speed;				//requests CPU to switch speed mode
+//wire	cpu_speed;				//requests CPU to switch speed mode
 wire	turbo;					//CPU is working in turbo mode
 wire	[5:0] memory_config;	//memory configuration
 wire	[3:0] floppy_config;	//floppy drives configuration (drive number and speed)
@@ -625,7 +626,7 @@ userio USERIO1
 );
 
 //assign cpu_speed = (chipset_config[0] & ~int7 & ~freeze & ~ovr);
-assign cpu_speed = 1'b0;
+//assign cpu_speed = 1'b0;
 
 //instantiate Denise
 Denise DENISE1
@@ -748,7 +749,7 @@ m68k_bridge CPU1
 	.xbs(xbs),
   .nrdy(gayle_nrdy),
 	.bls(bls),
-	.cpu_speed(cpu_speed),
+	.cpu_speed(cpu_speed & ~int7 & ~ovr & ~usrrst & ~bootrst),
   .memory_config(memory_config[3:0]),
 	.turbo(turbo),
 	._as(_cpu_as),
@@ -1239,6 +1240,7 @@ assign		_ce[3:0] = {~|bank[7:6],~|bank[5:4],~|bank[3:2],~|bank[1:0]};
 
 // ram address bus
 assign		address = {bank[7]|bank[6]|bank[5]|bank[4],bank[7]|bank[6]|bank[3]|bank[2],bank[7]|bank[5]|bank[3]|bank[1],address_in[18:1]};
+//assign address = {bank[7]|bank[5]|bank[3]|bank[1],address_in[18:1]};
 //always @(posedge clk28m)
 //	if (c1 && !c3 && enable)	// set address in Q1		
 //		address <= {bank[7]|bank[5]|bank[3]|bank[1],address_in[18:1]};
@@ -1374,7 +1376,10 @@ reg		_ta;					// transfer acknowledge
 always @(posedge clk)
 	if (_as)
 		turbo <= cpu_speed;
-		
+
+wire  turbo_cpu;
+assign turbo_cpu = 1'b0;
+	
 //latched valid peripheral address
 always @(posedge clk)
 	lvpa <= vpa;
@@ -1417,7 +1422,7 @@ always @(negedge clk or posedge _as)
 assign _dtack = (_ta_n );
 
 // synchronous control signals
-assign enable = ((~l_as & ~l_dtack & ~cck & ~turbo) | (~l_as28m & l_dtack & ~(dbr & xbs) & ~nrdy & turbo));
+assign enable = ((~l_as & ~l_dtack & ~cck & ~turbo_cpu) | (~l_as28m & l_dtack & ~(dbr & xbs) & ~nrdy & turbo_cpu));
 assign rd = (enable & lr_w);
 // in turbo mode l_uds and l_lds may be delayed by 35 ns
 assign hwr = (enable & ~lr_w & ~l_uds);

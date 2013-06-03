@@ -131,6 +131,7 @@ wire           rom_status;
 wire           ram_status;
 wire           reg_status;
 wire           ctrl_txd;
+//wire           ctrl_rxd;
 
 // tg68
 wire           tg68_rst;
@@ -252,7 +253,7 @@ assign TDO              = 1'b1;
 // UART
 assign uart_sel         = sw_5;
 assign UART_TXD         = uart_sel ? ctrl_txd : minimig_txd;
-assign ctrl_rxd         = uart_sel ? UART_RXD : 1'b1;
+//assign ctrl_rxd         = uart_sel ? UART_RXD : 1'b1;
 assign minimig_rxd      = uart_sel ? 1'b1     : UART_RXD;
 
 // SD card
@@ -447,6 +448,26 @@ TG68K tg68k (
   .ramuds       (tg68_cuds        )
 );
 
+/*
+//// TG68 main CPU ////
+TG68 tg68 (
+  .clk          (clk_114          ),
+  .reset        (tg68_rst         ),
+  .clkena_in    (1'b1             ),
+  .data_in      (tg68_dat_in      ),
+  .data_out     (tg68_dat_out     ),
+  .IPL          (tg68_IPL         ),
+  .dtack        (tg68_dtack       ),
+  .addr         (tg68_adr         ),
+  .as           (tg68_as          ),
+  .uds          (tg68_uds         ),
+  .lds          (tg68_lds         ),
+  .rw           (tg68_rw          ),
+  .drive_data   (                 ),
+  .enaRDreg     (tg68_ena7RD      ),
+  .enaWRreg     (tg68_ena7WR      )
+);
+*/
 
 //// sdram ////
 sdram_ctrl sdram (
@@ -523,6 +544,7 @@ Minimig1 minimig (
   .c3           (c3               ), // clk28m clock domain signal synchronous with clk signal delayed by 90 degrees
   .cck          (cck              ), // colour clock output (3.54 MHz)
   .eclk         (eclk             ), // 0.709379 MHz clock enable output (clk domain pulse)
+  .cpu_speed    (1'b0             ), // turbo enable
   //rs232 pins
   .rxd          (minimig_rxd      ), // RS232 receive
   .txd          (minimig_txd      ), // RS232 send
