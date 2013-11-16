@@ -260,10 +260,8 @@ wire		[15:0] denise_data_out;	//denise data bus out
 wire		[15:0] user_data_out;	//user IO data out
 wire		[15:0] gary_data_out;	//data out from memory bus multiplexer
 wire		[15:0] gayle_data_out;	//Gayle data out
-wire		[15:0] boot_data_out;	//boot rom data bus out
 wire		[15:0] cia_data_out;	//cia A+B data bus out
 wire		[15:0] ar3_data_out;	//Action Replay data out
-wire    [15:0] boot_data;     // boot rom data out
 
 //local signals for spi bus
 wire		paula_sdo; 				//paula spi data out
@@ -295,7 +293,6 @@ wire		dbs;					//data bus slow down, used for slowing down CPU access to chip, s
 wire		xbs;					//cross bridge access (memory and custom registers)
 wire		ovl;					//kickstart overlay enable
 wire		_led;					//power led
-wire		boot;    				//bootrom overlay enable
 wire		[3:0] sel_chip;			//chip ram select
 wire		[2:0] sel_slow;			//slow ram select
 wire		sel_kick;				//rom select
@@ -303,7 +300,6 @@ wire		sel_cia;				//CIA address space
 wire		sel_reg;				//chip register select
 wire		sel_cia_a;				//cia A select
 wire		sel_cia_b;				//cia B select
-wire		sel_boot;				//boot rom select
 wire		int2;					//intterrupt 2
 wire		int3;					//intterrupt 3 
 wire		int6;					//intterrupt 6
@@ -364,7 +360,6 @@ wire	selcart;				//Action Replay RAM select
 wire	ovr;					//overide chip memmory decoding
 
 wire	usrrst;					//user reset from osd interface
-wire	bootrst;				//user reset to bootloader
 wire	[1:0] lr_filter;		//lowres interpolation filter mode: bit 0 - horizontal, bit 1 - vertical
 wire	[1:0] hr_filter;		//hires interpolation filter mode: bit 0 - horizontal, bit 1 - vertical
 wire	[1:0] scanline;			//scanline effect configuration
@@ -456,7 +451,7 @@ assign sol_pulse = sol & ~sol_del; // rising edge detection
 
 reg [3:0] drv_cnt;
 always @(posedge clk)
-  if (drv_cnt != 0 && sol_pulse || drv_cnt == 0 && step_pulse && !boot && _change) // count only sol pulses when counter is not zero or step pulses and bootloader is not active
+  if (drv_cnt != 0 && sol_pulse || drv_cnt == 0 && step_pulse && _change) // count only sol pulses when counter is not zero or step pulses and bootloader is not active
     drv_cnt <= drv_cnt + 4'd1;
 
 reg drvsnd;
@@ -641,7 +636,6 @@ userio USERIO1
 	.ide_config(ide_config),
   .cpu_config(cpu_config),
 	.usrrst(usrrst),
-	.bootrst(bootrst),
   .cpurst(cpurst),
   .host_cs      (host_cs          ),
   .host_adr     (host_adr         ),
@@ -776,7 +770,7 @@ m68k_bridge CPU1
 	.xbs(xbs),
   .nrdy(gayle_nrdy),
 	.bls(bls),
-	.cpu_speed(cpu_speed & ~int7 & ~ovr & ~usrrst & ~bootrst),
+	.cpu_speed(cpu_speed & ~int7 & ~ovr & ~usrrst),
   .memory_config(memory_config[3:0]),
 	.turbo(turbo),
 	._as(_cpu_as),
@@ -814,8 +808,8 @@ bank_mapper BMAP1
 	.slow1(sel_slow[1]),
 	.slow2(sel_slow[2]),
 	.kick(sel_kick),
-	.cart(selcart),
-	.aron(aron),
+	.cart(1'b0),
+	.aron(1'b0),
   .ecs(chipset_config[3]),
 	.memory_config(memory_config[3:0]),
 	.bank(bank)
@@ -860,7 +854,6 @@ ActionReplay CART1
 	.cpu_hwr(cpu_hwr),
 	.cpu_lwr(cpu_lwr),
 	.dbr(dbr),
-	.boot(boot),
 	.freeze(freeze),
 	.int7(int7),
 	.ovr(ovr),
@@ -887,7 +880,6 @@ gary GARY1
 	.cpu_hwr(cpu_hwr),
 	.cpu_lwr(cpu_lwr),
 	.ovl(ovl),
-	.boot(boot),
 	.dbr(dbr),
 	.dbwe(dbwe),
 	.dbs(dbs),
@@ -902,7 +894,6 @@ gary GARY1
 	.sel_chip(sel_chip),
 	.sel_slow(sel_slow),
 	.sel_kick(sel_kick),
-	.sel_boot(sel_boot),
 	.sel_cia(sel_cia),
 	.sel_reg(sel_reg),
 	.sel_cia_a(sel_cia_a),
@@ -940,30 +931,6 @@ gayle GAYLE1
   .hd_frd(hd_frd)
 );
 	
-//instantiate boot rom
-//bootrom BOOTROM1 
-//(	
-//	.clk(clk),
-//	.aen(sel_boot),
-//	.rd(cpu_rd),
-//	.address_in(cpu_address_out[10:1]),
-//	.data_out(boot_data_out)
-//);
-
-//JBboot BOOTROM1 
-//( 
-//  .clock(clk),
-//  .address(cpu_address[10:1]),
-//  .q(boot_data)
-//);
-
-amiga_boot BOOTROM1 (
-  .clock    (clk),
-  .address  (cpu_address[8:1]),
-  .q        (boot_data)
-);
-
-assign boot_data_out[15:0] = (sel_boot) ? boot_data[15:0] : 16'h0000;
 
 //instantiate system control
 syscontrol CONTROL1 
@@ -971,10 +938,7 @@ syscontrol CONTROL1
 	.clk(clk),
 	.cnt(sof),
 	.mrst(kbdrst | usrrst | rst_ext),
-	.boot_done(sel_cia_a & sel_cia_b),
-	.reset(reset),
-	.boot(boot),
-	.boot_rst(bootrst)
+	.reset(reset)
 );
 
 
@@ -982,9 +946,7 @@ syscontrol CONTROL1
 
 //data multiplexer
 assign cpu_data_in[15:0] = gary_data_out[15:0]
-						 | boot_data_out[15:0]
 						 | cia_data_out[15:0]
-						 | ar3_data_out[15:0]
 						 | gayle_data_out[15:0];
 
 assign custom_data_out[15:0] = agnus_data_out[15:0]
@@ -1035,15 +997,11 @@ module syscontrol
 	input	clk,			//bus clock
 	input	cnt,			//pulses for counting
 	input	mrst,			//master/user reset input
-	input	boot_done,		//bootrom program finished input
-	output	reset,			//global synchronous system reset
-	output	boot,			//bootrom overlay enable output
-	input	boot_rst		//reset to bootloader
+	output	reset			//global synchronous system reset
 );
 
 //local signals
 reg		smrst0, smrst1;					//registered input
-reg		_boot = 1;
 reg		[2:0] rst_cnt = 0;		//reset timer SHOULD BE CLEARED BY CONFIG
 wire	_rst;					//local reset signal
 
@@ -1055,24 +1013,12 @@ end
 
 //reset timer and mrst control
 always @(posedge clk)
-	if (smrst1 || (boot && boot_done && _rst))
+	if (smrst1)
 		rst_cnt <= 3'd0;
 	else if (!_rst && cnt)
 		rst_cnt <= rst_cnt + 3'd1;
 
 assign _rst = rst_cnt[2];
-
-//boot control
-always @(posedge clk)
-	if (boot_rst)
-		_boot <= 1'd0;
-	else if (boot_done)
-		_boot <= 1'd1;
-
-//global boot output
-//assign boot = ~_boot;
-assign boot = 1'b0;
-
 
 //global reset output
 assign reset = ~_rst;

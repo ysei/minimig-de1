@@ -108,7 +108,6 @@ module userio
 	output	[2:0] ide_config,
   output  [1:0] cpu_config,
 	output	usrrst,					//user reset from osd module
-	output	bootrst,					//user reset to bootloader
   output cpurst,
   // host
   output wire           host_cs,
@@ -376,7 +375,6 @@ osd	osd1
   .cpu_config(cpu_config),
   .autofire_config(autofire_config),
 	.usrrst(usrrst),
-	.bootrst(bootrst),
   .cpurst(cpurst),
   .host_cs      (host_cs          ),
   .host_adr     (host_adr         ),
@@ -426,7 +424,6 @@ module osd
   output  reg [1:0] cpu_config = 0,
   output  reg [1:0] autofire_config = 0,
 	output	reg usrrst=1'b0,
-	output	reg bootrst=1'b0,
   output reg cpurst=1'b1,
   // host
   output reg            host_cs,
@@ -739,7 +736,7 @@ end
 // write regs
 always @ (posedge clk) begin
   if (rx && !cmd) begin
-    if (spi_reset_ctrl_sel)   begin if (dat_cnt == 0) {cpurst, usrrst, bootrst} <= #1 wrdat[2:0]; end
+    if (spi_reset_ctrl_sel)   begin if (dat_cnt == 0) {cpurst, usrrst} <= #1 wrdat[2:1]; end
 //    if (spi_clock_ctrl_sel)   begin if (dat_cnt == 0) end
     if (spi_osd_ctrl_sel)     begin if (dat_cnt == 0) {key_disable, osd_enable} <= #1 wrdat[1:0]; end
     if (spi_chip_cfg_sel)     begin if (dat_cnt == 0) t_chipset_config <= #1 wrdat[3:0]; end
